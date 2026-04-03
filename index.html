@@ -16,7 +16,8 @@ body{font-family:'Sarabun',sans-serif;background:#f0f4ff;-webkit-tap-highlight-c
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 .fade-in{animation:fadeIn 0.3s ease both}
 #progressBar{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,#6366f1,#8b5cf6,#a78bfa);width:0%;z-index:9999;transition:width .3s ease,opacity .4s ease;border-radius:0 99px 99px 0;box-shadow:0 0 10px #6366f166}
-#mainContent{display:block;opacity:1}
+#mainContent{display:none;opacity:0;transition:opacity .4s ease}
+#mainContent.visible{opacity:1}
 .tab-btn{transition:all .2s ease;border-bottom:3px solid transparent;opacity:.45;flex-shrink:0;white-space:nowrap}
 .tab-btn.active{border-bottom-color:#6366f1;color:#6366f1;opacity:1;font-weight:800}
 .comm-card{transition:all .2s ease;cursor:pointer}
@@ -33,6 +34,34 @@ input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;inset:0;
 <body class="pb-24 text-slate-800">
 
 <div id="progressBar"></div>
+
+<!-- ═══ LOGIN GATE ═══ -->
+<div id="loginGate" class="fixed inset-0 z-50 flex items-center justify-center px-5" style="background:linear-gradient(135deg,#f0f4ff 0%,#e0e7ff 50%,#ede9fe 100%)">
+  <div id="loginCard" class="bg-white w-full max-w-sm rounded-3xl p-8 shadow-2xl border border-indigo-100">
+    <div class="text-center mb-7">
+      <div class="w-20 h-20 mx-auto mb-4 bg-white rounded-2xl shadow-lg flex items-center justify-center p-3 border border-gray-100">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/4/40/7-eleven_logo.svg" class="w-full h-full object-contain"/>
+      </div>
+      <h2 class="text-2xl font-black text-gray-900">Delivery Analytics</h2>
+      <p class="text-gray-400 text-sm mt-1 font-medium">กรุณาใส่รหัสผ่าน</p>
+    </div>
+    <div class="space-y-4">
+      <div class="relative">
+        <div class="absolute inset-y-0 left-4 flex items-center pointer-events-none text-indigo-300">
+          <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"/></svg>
+        </div>
+        <input type="password" id="passInput" placeholder="Password"
+          class="w-full pl-12 pr-4 py-4 bg-slate-50 border-2 border-transparent rounded-2xl focus:border-indigo-400 outline-none transition-all font-bold text-gray-800 placeholder-gray-300">
+      </div>
+      <button id="loginBtn" onclick="checkLogin()"
+        class="w-full text-white font-black py-4 rounded-2xl transition-all active:scale-95 shadow-lg shadow-indigo-200"
+        style="background:linear-gradient(135deg,#6366f1,#7c3aed)">
+        <span id="loginBtnText">เข้าสู่ระบบ</span>
+      </button>
+      <p id="loginError" class="hidden text-red-500 text-center text-sm font-bold"></p>
+    </div>
+  </div>
+</div>
 
 
 <!-- ═══ MAIN APP ═══ -->
@@ -124,7 +153,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;inset:0;
 
 <script>
 // ═══ CONFIG ═══
-const API_URL = "https://script.google.com/macros/s/AKfycbyJMLSsIK73t_gLwoX7hRn28SWJuusuA62SnbqDZ_5ExswuPHH6Y8p4osXGkBC1K9IsmQ/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwa6NQqKmyzr212yLFV-Zw4wAMJWtBrCno4d4gs4-C3FqM_FH_ABvz7Zw5g-91FimlGng/exec";
 
 // ═══ COMMUNITIES ═══
 const COMMUNITIES = {
@@ -193,8 +222,9 @@ function filterBy(arr, commField='community'){
 async function fetchData(){
   progress(30);
   try{
-    const r = await fetch(`${API_URL}?action=all`);
+    const r = await fetch(apiUrl('all'));
     const d = await r.json();
+    if(d.error==='unauthorized'){ clearToken(); location.reload(); return; }
     if(d.error) throw new Error(d.error);
     allData.customers           = d.customers           || [];
     allData.customerProducts    = d.customer_products   || [];
@@ -556,7 +586,7 @@ function openModal(phone){
   $('modalMeta').textContent = `${numFmt(custInfo.order_count||0)} ออเดอร์ · ${fmtRev(custInfo.total_revenue)} · ${esc(custInfo.customer_group||'')}`;
 
   // ดึง customer_products เฉพาะคนนี้จาก GAS
-  fetch(`${API_URL}?action=customer_products&phone=${encodeURIComponent(phone)}`)
+  fetch(apiUrl('customer_products', `&phone=${encodeURIComponent(phone)}`))
     .then(r=>r.json())
     .then(custProds=>{
       if(!Array.isArray(custProds)) throw new Error('invalid');
@@ -607,8 +637,72 @@ function emptyState(){
   return `<div class="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-200"><div class="text-4xl mb-3">🔍</div><p class="text-gray-400 font-bold">ไม่พบข้อมูล</p></div>`;
 }
 
+// ═══ AUTH ═══
+const SESSION_KEY  = 'delivery_token';
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_MS   = 5 * 60 * 1000;
+let loginAttempts  = 0;
+let lockoutUntil   = 0;
+
+function getToken(){ return sessionStorage.getItem(SESSION_KEY)||''; }
+function saveToken(t){ sessionStorage.setItem(SESSION_KEY, t); }
+function clearToken(){ sessionStorage.removeItem(SESSION_KEY); }
+
+// แนบ token ทุก request
+function apiUrl(action, extra=''){
+  return `${API_URL}?action=${action}&token=${encodeURIComponent(getToken())}${extra}`;
+}
+
+async function checkLogin(){
+  if(Date.now() < lockoutUntil){
+    const s=Math.ceil((lockoutUntil-Date.now())/1000);
+    $('loginError').textContent=`🔒 ลองใหม่ใน ${s} วินาที`;
+    $('loginError').classList.remove('hidden'); return;
+  }
+  const pass=$('passInput').value.trim();
+  if(!pass) return;
+  $('loginBtn').disabled=true;
+  $('loginBtnText').textContent='กำลังตรวจสอบ...';
+  $('loginError').classList.add('hidden');
+  try{
+    const r=await fetch(`${API_URL}?action=login&pass=${encodeURIComponent(pass)}`);
+    const d=await r.json();
+    if(d.auth===true && d.token){
+      loginAttempts=0;
+      saveToken(d.token);
+      showApp();
+    } else {
+      loginAttempts++;
+      if(loginAttempts>=MAX_ATTEMPTS) lockoutUntil=Date.now()+LOCKOUT_MS;
+      const left=MAX_ATTEMPTS-loginAttempts;
+      $('loginError').textContent=`❌ รหัสผ่านไม่ถูกต้อง${left>0?` (เหลือ ${left} ครั้ง)`:''}`;
+      $('loginError').classList.remove('hidden');
+      $('passInput').value='';
+      $('loginBtn').disabled=false;
+      $('loginBtnText').textContent='เข้าสู่ระบบ';
+    }
+  } catch(e){
+    toast('⚠️ เชื่อมต่อไม่ได้','error');
+    $('loginBtn').disabled=false;
+    $('loginBtnText').textContent='เข้าสู่ระบบ';
+  }
+}
+
+function showApp(){
+  $('loginGate').style.opacity='0';
+  setTimeout(()=>{
+    $('loginGate').style.display='none';
+    $('mainContent').style.display='block';
+    requestAnimationFrame(()=>$('mainContent').classList.add('visible'));
+    buildCommunityGrid(); fetchData();
+  },350);
+}
+
 // ═══ BOOT ═══
-window.onload=()=>{ buildCommunityGrid(); fetchData(); };
+window.onload=()=>{
+  $('passInput').addEventListener('keypress',e=>{ if(e.key==='Enter') checkLogin(); });
+  if(getToken()){ showApp(); }
+};
 </script>
 </body>
 </html>
