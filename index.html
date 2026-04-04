@@ -92,19 +92,19 @@ input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;inset:0;
   <div id="kpiCards" class="hidden mb-4">
     <div class="grid grid-cols-4 gap-2">
       <div class="rounded-2xl p-3 text-center text-white shadow-md" style="background:linear-gradient(135deg,#6366f1,#4f46e5)">
-        <p class="text-[9px] font-bold opacity-80 uppercase tracking-wide">Orders</p>
-        <p id="kpiOrders" class="text-xl font-black mt-0.5">0</p>
+        <p class="text-[8px] font-bold opacity-80 uppercase tracking-wide">Orders</p>
+        <p id="kpiOrders" class="text-lg font-black mt-0.5">0</p>
       </div>
       <div class="rounded-2xl p-3 text-center text-white shadow-md" style="background:linear-gradient(135deg,#7c3aed,#6d28d9)">
-        <p class="text-[9px] font-bold opacity-80 uppercase tracking-wide">Customers</p>
-        <p id="kpiCustomers" class="text-xl font-black mt-0.5">0</p>
+        <p class="text-[8px] font-bold opacity-80 uppercase tracking-wide">Customers</p>
+        <p id="kpiCustomers" class="text-lg font-black mt-0.5">0</p>
       </div>
       <div class="rounded-2xl p-3 text-center text-white shadow-md" style="background:linear-gradient(135deg,#0ea5e9,#0284c7)">
-        <p class="text-[9px] font-bold opacity-80 uppercase tracking-wide">Repeat</p>
-        <p id="kpiRepeat" class="text-xl font-black mt-0.5">0</p>
+        <p class="text-[8px] font-bold opacity-80 uppercase tracking-wide">Repeat</p>
+        <p id="kpiRepeat" class="text-lg font-black mt-0.5">0</p>
       </div>
       <div class="rounded-2xl p-3 text-center text-white shadow-md" style="background:linear-gradient(135deg,#10b981,#059669)">
-        <p class="text-[9px] font-bold opacity-80 uppercase tracking-wide">Revenue</p>
+        <p class="text-[8px] font-bold opacity-80 uppercase tracking-wide">Revenue</p>
         <p id="kpiRevenue" class="text-[13px] font-black mt-0.5">฿0</p>
       </div>
     </div>
@@ -379,7 +379,7 @@ function renderFreq(){
         <div class="flex-1 bg-gray-100 rounded-full overflow-hidden h-1.5">
           <div class="freq-bar h-full rounded-full" style="width:${pct(cnt,maxC)}%;background:${barColor}"></div>
         </div>
-        <span class="text-sm font-black text-gray-700 w-16 text-right flex-shrink-0">${numFmt(cnt)} ออเดอร์</span>
+        <span class="text-sm font-black text-gray-700 w-20 text-right flex-shrink-0 whitespace-nowrap">${numFmt(cnt)} orders</span>
       </div>
       <div class="flex justify-between mt-1.5">
         <span class="text-[10px] text-gray-400">AOV ฿${numFmt(Number(r.avg_order||0).toFixed(0))}</span>
