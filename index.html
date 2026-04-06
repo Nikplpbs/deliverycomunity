@@ -164,12 +164,13 @@ function typeColor(t){ return TYPE_COLOR[t]||'#94a3b8'; }
 // ═══ STATE ═══
 // allData คือข้อมูลจริงจาก GAS (pre-aggregated แล้ว)
 let allData = {
-  customers:          [],   // {community, รหัสร้าน, store_name, เบอร์ผู้สั่ง, order_count, total_revenue, avg_order, last_order, first_order, customer_group}
-  customerProducts:   [],   // {เบอร์ผู้สั่ง, community, ชื่อสินค้า, ประเภทสินค้า, times_ordered, total_qty, total_spend}
-  storeSummary:       [],   // {community, รหัสร้าน, store_name, order_count, unique_customers, total_revenue, avg_order}
-  communitySummary:   [],   // {community, order_count, unique_customers, total_revenue, avg_order, repeat_customers, repeat_rate}
-  productsByCommunity:[],   // {community, ชื่อสินค้า, ประเภทสินค้า, order_count, total_revenue}
-  productsByType:     [],   // {community, ประเภทสินค้า, order_count, total_revenue}
+  customers:          [],
+  customerProducts:   [],
+  storeSummary:       [],
+  communitySummary:   [],
+  productsByCommunity:[],
+  productsByType:     [],
+  dayofweek:          [],
 };
 let currentCommunity = null;
 let currentView      = 'freq';
@@ -210,12 +211,13 @@ async function fetchData(){
     const d = await r.json();
     if(d.error==='unauthorized'){ clearToken(); location.reload(); return; }
     if(d.error) throw new Error(d.error);
-    allData.customers           = d.customers           || [];
-    allData.customerProducts    = d.customer_products   || [];
-    allData.storeSummary        = d.store_summary        || [];
-    allData.communitySummary    = d.community_summary    || [];
-    allData.productsByCommunity = d.products_by_community|| [];
-    allData.productsByType      = d.products_by_type     || [];
+    allData.customers           = d.customers            || [];
+    allData.customerProducts    = d.customer_products    || [];
+    allData.storeSummary        = d.store_summary         || [];
+    allData.communitySummary    = d.community_summary     || [];
+    allData.productsByCommunity = d.products_by_community || [];
+    allData.productsByType      = d.products_by_type      || [];
+    allData.dayofweek           = d.orders_by_dayofweek   || [];
     const total = allData.customers.length;
     if(!total) throw new Error('empty');
     toast(`✅ โหลด ${numFmt(total)} ลูกค้า`,'success');
@@ -362,6 +364,7 @@ function renderFreq(){
     const barColor=r.customer_group==='VIP'?'#f59e0b':r.customer_group==='Loyal'?'#6366f1':r.customer_group==='Regular'?'#10b981':'#94a3b8';
     const tagStyle=r.customer_group==='VIP'?'background:#fef3c7;color:#92400e':r.customer_group==='Loyal'?'background:#e0e7ff;color:#3730a3':r.customer_group==='Regular'?'background:#d1fae5;color:#065f46':'background:#f1f5f9;color:#64748b';
     const tagLabel=r.customer_group==='VIP'?'VIP':r.customer_group==='Loyal'?'Loyal':r.customer_group==='Regular'?'Regular':'One-time';
+    const displayName = esc(r['ชื่อผู้สั่ง']||r['เบอร์ผู้สั่ง']||'—');
     return `
     <div class="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100"
       style="animation-delay:${i*10}ms">
@@ -369,7 +372,7 @@ function renderFreq(){
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0" style="background:${barColor}">${i+1}</div>
           <div>
-            <p class="font-black text-gray-900 text-[15px]">${esc(r['เบอร์ผู้สั่ง'])}</p>
+            <p class="font-black text-gray-900 text-[15px]">${displayName}</p>
             <p class="text-[10px] text-gray-400 mt-0.5">${esc(r.store_name||r['รหัสร้าน']||'')} · Last ${fmtTH(r.last_order)}</p>
           </div>
         </div>
@@ -433,8 +436,42 @@ function renderProduct(){
     </div>`;
   }).join('');
 
+  // วันขายดีในสัปดาห์
+  const dowData = filterBy(allData.dayofweek);
+  const dowMap  = {};
+  dowData.forEach(r=>{
+    const k=r.day_name||'';
+    if(!dowMap[k]) dowMap[k]={order_count:0,dayofweek:r.dayofweek};
+    dowMap[k].order_count+=Number(r.order_count)||0;
+  });
+  const dowSorted=Object.entries(dowMap).sort((a,b)=>a[1].dayofweek-b[1].dayofweek);
+  const maxDow=Math.max(...dowSorted.map(([,d])=>d.order_count),1);
+  const DAY_EN={จันทร์:'Mon',อังคาร:'Tue',พุธ:'Wed',พฤหัส:'Thu',ศุกร์:'Fri',เสาร์:'Sat',อาทิตย์:'Sun'};
+  const bestDay=dowSorted.reduce((a,b)=>b[1].order_count>a[1].order_count?b:a,dowSorted[0]);
+
+  const dowBars=dowSorted.map(([day,d])=>{
+    const isBest=day===bestDay?.[0];
+    const col=isBest?'#6366f1':'#cbd5e1';
+    const w=pct(d.order_count,maxDow);
+    return `
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-[11px] font-bold text-gray-500 w-8 flex-shrink-0">${DAY_EN[day]||day}</span>
+      <div class="flex-1 bg-gray-100 rounded-full h-5 overflow-hidden relative">
+        <div class="h-full rounded-full flex items-center" style="width:${w}%;background:${col}">
+          <span class="text-[10px] font-black text-white pl-2 whitespace-nowrap">${numFmt(d.order_count)}</span>
+        </div>
+      </div>
+      ${isBest?`<span class="text-[10px] font-black text-indigo-600 flex-shrink-0">🔥 Best</span>`:''}
+    </div>`;
+  }).join('');
+
   $('contentArea').innerHTML=`
     <div class="fade-in">
+      ${dowSorted.length?`
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-gray-100 mb-4">
+        <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">📅 Best Day of Week · ${esc(currentCommunity||'All')}</p>
+        ${dowBars}
+      </div>`:''}
       <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3">Top Products · ${esc(currentCommunity||'All Communities')}</p>
       ${prodRows}
     </div>`;
@@ -457,14 +494,20 @@ function renderStore(){
     const totCust=rows.reduce((a,r)=>a+(Number(r.unique_customers)||0),0);
 
     const storeRows=rows.sort((a,b)=>b.order_count-a.order_count).map(r=>`
-      <div class="flex items-center justify-between py-3 border-b border-gray-50 last:border-0">
-        <div class="flex-1 min-w-0 pr-3">
-          <p class="font-black text-gray-800 text-sm">${esc(r.store_name||r['รหัสร้าน'])}</p>
-          <p class="text-[10px] font-bold mt-0.5" style="color:${st.text}">รหัส ${esc(r['รหัสร้าน'])} · ${numFmt(r.unique_customers)} ลูกค้า</p>
+      <div class="py-3 border-b border-gray-50 last:border-0">
+        <div class="flex items-center justify-between">
+          <div class="flex-1 min-w-0 pr-3">
+            <p class="font-black text-gray-800 text-sm">${esc(r.store_name||r['รหัสร้าน'])}</p>
+            <p class="text-[10px] font-bold mt-0.5" style="color:${st.text}">รหัส ${esc(r['รหัสร้าน'])} · ${numFmt(r.unique_customers)} customers</p>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <p class="font-black text-gray-800">${numFmt(r.order_count)}</p>
+            <p class="text-[10px] text-emerald-600 font-bold">${fmtRev(r.total_revenue)}</p>
+          </div>
         </div>
-        <div class="text-right flex-shrink-0">
-          <p class="font-black text-gray-800">${numFmt(r.order_count)}</p>
-          <p class="text-[10px] text-emerald-600 font-bold">${fmtRev(r.total_revenue)}</p>
+        <div class="flex gap-3 mt-1.5">
+          <span class="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded-full">~${r.avg_per_day||0} orders/day</span>
+          <span class="text-[10px] text-gray-400">${esc(r.first_date||'')} – ${esc(r.last_date||'')}</span>
         </div>
       </div>`).join('');
 
