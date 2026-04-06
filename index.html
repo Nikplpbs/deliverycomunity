@@ -365,9 +365,10 @@ function renderFreq(){
     const tagStyle=r.customer_group==='VIP'?'background:#fef3c7;color:#92400e':r.customer_group==='Loyal'?'background:#e0e7ff;color:#3730a3':r.customer_group==='Regular'?'background:#d1fae5;color:#065f46':'background:#f1f5f9;color:#64748b';
     const tagLabel=r.customer_group==='VIP'?'VIP':r.customer_group==='Loyal'?'Loyal':r.customer_group==='Regular'?'Regular':'One-time';
     const displayName = esc(r['ชื่อผู้สั่ง']||r['เบอร์ผู้สั่ง']||'—');
+    const phone = String(r['เบอร์ผู้สั่ง']||'');
     return `
-    <div class="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100"
-      style="animation-delay:${i*10}ms">
+    <div class="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100 cursor-pointer active:scale-[0.98] transition-transform"
+      style="animation-delay:${i*10}ms" onclick="window.open(CUSTOMER_DETAIL_URL+'#phone='+encodeURIComponent(phone)+'&token='+encodeURIComponent(getToken()),'_blank')">
       <div class="flex justify-between items-start mb-2.5">
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0" style="background:${barColor}">${i+1}</div>
@@ -376,7 +377,10 @@ function renderFreq(){
             <p class="text-[10px] text-gray-400 mt-0.5">${esc(r.store_name||r['รหัสร้าน']||'')} · Last ${fmtTH(r.last_order)}</p>
           </div>
         </div>
-        <span class="text-[10px] font-black px-2 py-1 rounded-full" style="${tagStyle}">${tagLabel}</span>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[10px] font-black px-2 py-1 rounded-full" style="${tagStyle}">${tagLabel}</span>
+          <svg class="h-4 w-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"/></svg>
+        </div>
       </div>
       <div class="flex items-center gap-3">
         <div class="flex-1 bg-gray-100 rounded-full overflow-hidden h-1.5">
@@ -599,7 +603,7 @@ function emptyState(){
   return `<div class="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-200"><div class="text-4xl mb-3">🔍</div><p class="text-gray-400 font-bold">ไม่พบข้อมูล</p></div>`;
 }
 
-// ═══ AUTH ═══
+const CUSTOMER_DETAIL_URL = "https://nikplpbs.github.io/Cus/index.html";
 const SESSION_KEY  = 'delivery_token';
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS   = 5 * 60 * 1000;
