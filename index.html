@@ -368,7 +368,7 @@ function renderFreq(){
     const phone = String(r['เบอร์ผู้สั่ง']||'');
     return `
     <div class="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100 cursor-pointer active:scale-[0.98] transition-transform"
-      style="animation-delay:${i*10}ms" onclick="window.open(CUSTOMER_DETAIL_URL+'#phone='+encodeURIComponent(phone)+'&token='+encodeURIComponent(getToken()),'_blank')">
+      style="animation-delay:${i*10}ms" onclick="openCustomerDetail('${esc(phone)}')" >
       <div class="flex justify-between items-start mb-2.5">
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0" style="background:${barColor}">${i+1}</div>
@@ -599,7 +599,10 @@ function renderCompare(){
     </div>`;
 }
 
-function emptyState(){
+function openCustomerDetail(phone){
+  const url = CUSTOMER_DETAIL_URL + '#phone=' + encodeURIComponent(phone) + '&token=' + encodeURIComponent(getToken());
+  window.open(url, '_blank');
+}
   return `<div class="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-200"><div class="text-4xl mb-3">🔍</div><p class="text-gray-400 font-bold">ไม่พบข้อมูล</p></div>`;
 }
 
