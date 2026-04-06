@@ -137,8 +137,7 @@ input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;inset:0;
 
 <script>
 // ═══ CONFIG ═══
-const API_URL = "https://script.google.com/macros/s/AKfycby0eN3wRAKfdWNRTasak1pfcRa5Xn4CN28Xqau3xQZSoJ-GX0L6xrh4U4sfW7qW7lXnrg/exec
-";
+const API_URL = "https://script.google.com/macros/s/AKfycby0eN3wRAKfdWNRTasak1pfcRa5Xn4CN28Xqau3xQZSoJ-GX0L6xrh4U4sfW7qW7lXnrg/exec";
 
 // ═══ COMMUNITIES ═══
 const COMMUNITIES = {
@@ -369,7 +368,7 @@ function renderFreq(){
     const phone = String(r['เบอร์ผู้สั่ง']||'');
     return `
     <div class="bg-white rounded-2xl p-4 mb-2.5 shadow-sm border border-gray-100 cursor-pointer active:scale-[0.98] transition-transform"
-      style="animation-delay:${i*10}ms" onclick="openCustomerDetail('${esc(phone)}')" >
+      style="animation-delay:${i*10}ms" data-phone="${esc(phone)}" onclick="openCustomerDetail(this.dataset.phone)" >
       <div class="flex justify-between items-start mb-2.5">
         <div class="flex items-center gap-2.5">
           <div class="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-black text-white flex-shrink-0" style="background:${barColor}">${i+1}</div>
