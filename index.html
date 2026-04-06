@@ -137,7 +137,8 @@ input[type="date"]::-webkit-calendar-picker-indicator{position:absolute;inset:0;
 
 <script>
 // ═══ CONFIG ═══
-const API_URL = "https://script.google.com/macros/s/AKfycby0eN3wRAKfdWNRTasak1pfcRa5Xn4CN28Xqau3xQZSoJ-GX0L6xrh4U4sfW7qW7lXnrg/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycby0eN3wRAKfdWNRTasak1pfcRa5Xn4CN28Xqau3xQZSoJ-GX0L6xrh4U4sfW7qW7lXnrg/exec
+";
 
 // ═══ COMMUNITIES ═══
 const COMMUNITIES = {
@@ -672,7 +673,16 @@ function showApp(){
 // ═══ BOOT ═══
 window.onload=()=>{
   $('passInput').addEventListener('keypress',e=>{ if(e.key==='Enter') checkLogin(); });
-  if(getToken()){ showApp(); }
+  if(getToken()){
+    // ตรวจ token กับ GAS ก่อน
+    fetch(`${API_URL}?action=status&token=${encodeURIComponent(getToken())}`)
+      .then(r=>r.json())
+      .then(d=>{
+        if(d.error==='unauthorized'){ clearToken(); }
+        else { showApp(); }
+      })
+      .catch(()=>{ showApp(); }); // ถ้า offline ให้ผ่านไปก่อน
+  }
 };
 </script>
 </body>
