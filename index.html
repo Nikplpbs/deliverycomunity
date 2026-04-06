@@ -603,6 +603,8 @@ function openCustomerDetail(phone){
   const url = CUSTOMER_DETAIL_URL + '#phone=' + encodeURIComponent(phone) + '&token=' + encodeURIComponent(getToken());
   window.open(url, '_blank');
 }
+
+function emptyState(){
   return `<div class="text-center py-24 bg-white rounded-3xl border-2 border-dashed border-gray-200"><div class="text-4xl mb-3">🔍</div><p class="text-gray-400 font-bold">ไม่พบข้อมูล</p></div>`;
 }
 
